@@ -118,9 +118,16 @@ class Game(ctx:Context):View(ctx){
  val navSheet:Bitmap?=try{
    ctx.assets.open("file_00000000c3248209a554b1caf956df3c.png").use { BitmapFactory.decodeStream(it) }
  }catch(e:Exception){android.util.Log.e("LifeTycoon","Nav art load failed",e);null}
- val cleanNav:List<Bitmap?>=(0..5).map { i ->
-   try {ctx.assets.open("processed/nav_${i}.png").use {BitmapFactory.decodeStream(it)}} 
-   catch(e:Exception){null}
+ val cleanNav = mutableListOf<Bitmap?>()
+ for (navIndex in 0..5) {
+   val bitmap: Bitmap? = try {
+     ctx.assets.open("processed/nav_" + navIndex + ".png").use { input ->
+       BitmapFactory.decodeStream(input)
+     }
+   } catch (error: Exception) {
+     null
+   }
+   cleanNav.add(bitmap)
  }
  var tapPulse=0f
  val bursts=mutableListOf<Triple<Float,Float,Long>>()
