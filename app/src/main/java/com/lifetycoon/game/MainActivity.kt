@@ -60,12 +60,38 @@ class Game(ctx:Context):View(ctx){
  val deep=Color.rgb(65,51,53)
  val lime=Color.rgb(141,212,57)
  val background:Bitmap?=try {
-   val file=ctx.assets.list("")?.firstOrNull { it.endsWith(".png",true) && it!="a_clean_colorful_cartoon_game_assets_sheet_flat_c.png" && it!="lifetycoon_business_icons_0_6.png" }
+   val file=ctx.assets.list("")?.firstOrNull { it.endsWith(".png",true) && it!="a_clean_colorful_cartoon_game_assets_sheet_flat_c.png" && it!="lifetycoon_business_icons_0_6.png" && it!="file_00000000ac148209960818905b980f98.png" }
    if(file!=null)ctx.assets.open(file).use { BitmapFactory.decodeStream(it) } else null
  }catch(e:Exception){android.util.Log.e("LifeTycoon","Background load failed",e);null}
  val businessIcons:Bitmap?=try {
    ctx.assets.open("lifetycoon_business_icons_0_6.png").use { BitmapFactory.decodeStream(it) }
  }catch(e:Exception){android.util.Log.e("LifeTycoon","Business icons load failed",e);null}
+ val hudSheet:Bitmap?=try {
+   ctx.assets.open("file_00000000ac148209960818905b980f98.png").use { BitmapFactory.decodeStream(it) }
+ }catch(e:Exception){android.util.Log.e("LifeTycoon","HUD asset load failed",e);null}
+ val hudBounds:Rect?=hudSheet?.let { bitmap ->
+   // The asset contains generous transparent padding; locate actual painted pixels.
+   var left=bitmap.width;var right=0;var top=bitmap.height;var bottom=0
+   val pixels=IntArray(bitmap.width)
+   for(y in 0 until bitmap.height step 2){
+    bitmap.getPixels(pixels,0,bitmap.width,0,y,bitmap.width,1)
+    for(x in 0 until bitmap.width step 2){
+     if(Color.alpha(pixels[x])>35){
+      left=minOf(left,x);right=maxOf(right,x)
+      top=minOf(top,y);bottom=maxOf(bottom,y)
+     }
+    }
+   }
+   if(right>left&&bottom>top)Rect(left,top,right+1,bottom+1) else null
+ }
+ fun hudIcon(c:Canvas,start:Float,end:Float,x:Float,y:Float,w:Float,h:Float){
+   val bitmap=hudSheet?:return
+   val bounds=hudBounds?:return
+   val left=(bounds.left+bounds.width()*start).toInt().coerceIn(0,bitmap.width-1)
+   val right=(bounds.left+bounds.width()*end).toInt().coerceIn(left+1,bitmap.width)
+   p.color=Color.WHITE;p.alpha=255;p.isFilterBitmap=true
+   c.drawBitmap(bitmap,Rect(left,bounds.top,right,bounds.bottom),RectF(x,y,x+w,y+h),p)
+ }
  var tapPulse=0f
  val bursts=mutableListOf<Triple<Float,Float,Long>>()
  val hero:Bitmap?=try{
@@ -103,14 +129,18 @@ class Game(ctx:Context):View(ctx){
   val now=System.currentTimeMillis();cash+=(staff*2+shop*25)*(now-last).coerceIn(0,60000)/1000.0;last=now
   c.save();c.scale(width/400f,height/800f);c.drawColor(Color.rgb(255,247,223))
   box(c,0f,0f,400f,92f,Color.rgb(255,220,146),0f)
-  box(c,7f,12f,140f,64f,deep,15f)
-  text(c,"Lv."+((totalTaps/100)+1)+" 거지",77f,36f,17f,Color.WHITE)
-  box(c,20f,47f,114f,13f,Color.rgb(35,30,31),7f)
-  box(c,20f,47f,114f*(totalTaps%100)/100f,13f,amber,7f)
-  box(c,153f,15f,142f,53f,deep,16f)
-  text(c,"₩ "+format(cash),224f,49f,23f,Color.rgb(255,215,79))
-  box(c,301f,15f,91f,53f,deep,16f)
-  text(c,"◆ 0",344f,48f,21f,Color.rgb(219,145,255))
+  box(c,8f,12f,148f,67f,deep,16f)
+  hudIcon(c,0f,0.145f,10f,9f,61f,69f)
+  text(c,"Lv."+((totalTaps/100)+1)+" 거지",111f,36f,16f,Color.WHITE)
+  box(c,76f,47f,69f,14f,Color.rgb(35,30,31),7f)
+  box(c,76f,47f,69f*(totalTaps%100)/100f,14f,amber,7f)
+  text(c,""+(totalTaps%100)+"%",110f,73f,12f,Color.WHITE)
+  box(c,162f,15f,139f,55f,deep,16f)
+  hudIcon(c,0.375f,0.49f,165f,18f,48f,46f)
+  text(c,format(cash),253f,48f,22f,Color.rgb(255,215,79))
+  box(c,305f,15f,88f,55f,deep,16f)
+  hudIcon(c,0.67f,0.77f,307f,23f,37f,37f)
+  text(c,"0",366f,49f,22f,Color.WHITE)
   if(notice.isNotEmpty())text(c,notice,200f,89f,13f,deep)
   if(tab==0){
    if(background!=null){
