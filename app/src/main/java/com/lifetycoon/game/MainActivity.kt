@@ -7,7 +7,37 @@ import android.view.*
 import kotlin.math.pow
 
 class MainActivity:Activity(){
- override fun onCreate(savedInstanceState:Bundle?){super.onCreate(savedInstanceState);setContentView(Game(this))}
+ override fun onCreate(savedInstanceState:Bundle?){
+  super.onCreate(savedInstanceState)
+  val preferences=getSharedPreferences("save",0)
+  val previous=preferences.getString("last_crash",null)
+  Thread.setDefaultUncaughtExceptionHandler { _, error ->
+   try {
+    preferences.edit().putString("last_crash",android.util.Log.getStackTraceString(error).take(5000)).commit()
+   } catch (_:Throwable) {}
+   android.os.Process.killProcess(android.os.Process.myPid())
+   kotlin.system.exitProcess(10)
+  }
+  if(previous!=null){
+   val message=android.widget.TextView(this)
+   message.text="인생역전 오류 진단 화면\n\n아래 내용을 캡처해서 보내줘:\n\n"+previous
+   message.textSize=14f
+   message.setTextColor(android.graphics.Color.BLACK)
+   message.setPadding(24,40,24,24)
+   val scroll=android.widget.ScrollView(this)
+   scroll.addView(message)
+   setContentView(scroll)
+   preferences.edit().remove("last_crash").apply()
+  }else{
+   try {setContentView(Game(this))}
+   catch(error:Throwable){
+    val message=android.widget.TextView(this)
+    message.text="시작 오류:\n"+android.util.Log.getStackTraceString(error)
+    message.textSize=14f
+    setContentView(message)
+   }
+  }
+ }
 }
 class Game(ctx:Context):View(ctx){
  val store=ctx.getSharedPreferences("save",0)
@@ -25,6 +55,7 @@ class Game(ctx:Context):View(ctx){
  fun cost(base:Double,level:Int)=base*1.2.pow(level.toDouble())
  fun save(){store.edit().putLong("cash",cash.coerceAtMost(Long.MAX_VALUE.toDouble()).toLong()).putInt("tap",tap).putInt("staff",staff).putInt("shop",shop).apply()}
  override fun onDraw(c:Canvas){
+  try {
   val now=System.currentTimeMillis();cash+=(staff*2+shop*25)*(now-last).coerceIn(0,60000)/1000.0;last=now
   c.save();c.scale(width/400f,height/800f);c.drawColor(Color.rgb(255,247,223))
   box(c,0f,0f,400f,180f,Color.rgb(255,216,130),0f)
@@ -63,9 +94,17 @@ class Game(ctx:Context):View(ctx){
   val names=listOf("터치","강화","사업")
   for(i in 0..2){box(c,8f+i*132f,719f,124f,63f,if(tab==i)Color.rgb(255,188,55) else Color.rgb(239,231,210));text(c,names[i],70f+i*132f,759f,21f)}
   c.restore();postInvalidateDelayed(40)
+  }catch(error:Throwable){
+   android.util.Log.e("LifeTycoon","Draw error",error)
+   c.drawColor(Color.WHITE)
+   p.color=Color.RED;p.textSize=20f;p.textAlign=Paint.Align.LEFT
+   c.drawText("Drawing error: "+error.javaClass.simpleName,15f,60f,p)
+   throw error
+  }
  }
  override fun onTouchEvent(e:MotionEvent):Boolean{
   if(e.action!=MotionEvent.ACTION_UP)return true
+  if(width<=0||height<=0)return true
   val x=e.x*400f/width;val y=e.y*800f/height
   if(y>=704f){tab=(x/133f).toInt().coerceIn(0,2)}
   else if(tab==0&&y in 194f..625f){cash+=tap}
