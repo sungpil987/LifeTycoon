@@ -22,6 +22,10 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Prepare clean UI graphics
+        run: |
+          python3 -m pip install --user Pillow
+          python3 tools/process_assets.py
       - name: Build debug APK
         run: gradle assembleDebug --no-daemon --stacktrace
       - uses: actions/upload-artifact@v4
