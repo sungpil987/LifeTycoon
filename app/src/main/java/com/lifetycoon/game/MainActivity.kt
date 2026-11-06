@@ -118,6 +118,10 @@ class Game(ctx:Context):View(ctx){
  val navSheet:Bitmap?=try{
    ctx.assets.open("file_00000000c3248209a554b1caf956df3c.png").use { BitmapFactory.decodeStream(it) }
  }catch(e:Exception){android.util.Log.e("LifeTycoon","Nav art load failed",e);null}
+ val cleanNav:List<Bitmap?>=(0..5).map { i ->
+   try {ctx.assets.open("processed/nav_${i}.png").use {BitmapFactory.decodeStream(it)}} 
+   catch(e:Exception){null}
+ }
  var tapPulse=0f
  val bursts=mutableListOf<Triple<Float,Float,Long>>()
  val hero:Bitmap?=try{
@@ -294,12 +298,14 @@ class Game(ctx:Context):View(ctx){
   for(i in 0..5){
    val x=3f+i*66f
    box(c,x,692f,64f,70f,if(tab==i)amber else Color.rgb(105,90,88),12f)
-   if(navSheet!=null){
+   if(cleanNav[i]!=null){
+    p.color=Color.WHITE;p.alpha=255;p.isFilterBitmap=true
+    c.drawBitmap(cleanNav[i]!!,null,RectF(x+6f,698f,x+58f,752f),p)
+   }else if(navSheet!=null){
     val sliceW=navSheet.width/6
-    // Source sheet has black padding above and below the six horizontal icons.
     val src=Rect(i*sliceW,(navSheet.height*.12f).toInt(),(i+1)*sliceW,(navSheet.height*.9f).toInt())
     p.color=Color.WHITE;p.alpha=255;p.isFilterBitmap=true
-    c.drawBitmap(navSheet,src,RectF(x+3f,694f,x+61f,757f),p)
+    c.drawBitmap(navSheet,src,RectF(x+5f,698f,x+59f,752f),p)
    }else{
     text(c,symbols[i],x+32f,724f,23f,if(tab==i)deep else Color.WHITE)
     text(c,names[i],x+32f,748f,13f,if(tab==i)deep else Color.WHITE)
