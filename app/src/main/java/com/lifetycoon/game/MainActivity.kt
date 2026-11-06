@@ -57,9 +57,12 @@ class Game(ctx:Context):View(ctx){
  val deep=Color.rgb(65,51,53)
  val lime=Color.rgb(141,212,57)
  val background:Bitmap?=try {
-   val file=ctx.assets.list("")?.firstOrNull { it.endsWith(".png",true) && it!="a_clean_colorful_cartoon_game_assets_sheet_flat_c.png" }
+   val file=ctx.assets.list("")?.firstOrNull { it.endsWith(".png",true) && it!="a_clean_colorful_cartoon_game_assets_sheet_flat_c.png" && it!="lifetycoon_business_icons_0_6.png" }
    if(file!=null)ctx.assets.open(file).use { BitmapFactory.decodeStream(it) } else null
  }catch(e:Exception){android.util.Log.e("LifeTycoon","Background load failed",e);null}
+ val businessIcons:Bitmap?=try {
+   ctx.assets.open("lifetycoon_business_icons_0_6.png").use { BitmapFactory.decodeStream(it) }
+ }catch(e:Exception){android.util.Log.e("LifeTycoon","Business icons load failed",e);null}
  var tapPulse=0f
  val bursts=mutableListOf<Triple<Float,Float,Long>>()
  val hero:Bitmap?=try{
@@ -143,10 +146,19 @@ class Game(ctx:Context):View(ctx){
    val quick=listOf("직원 고용","가게 운영","부동산","기업 인수","도시 확장","환생","연구소","업적")
    for(i in quick.indices){
     val x=8f+(i%4)*98f;val y=510f+(i/4)*76f
-    box(c,x,y+3f,91f,68f,Color.rgb(147,112,82),12f)
-    box(c,x,y,91f,68f,if(i<2)Color.rgb(255,216,153) else Color.rgb(214,198,178),12f)
-    text(c,when(i){0->"♟";1->"▤";2->"▥";3->"▦";4->"⌂";5->"∞";6->"⚗";else->"★"},x+45f,y+31f,25f)
-    text(c,quick[i],x+45f,y+55f,13f)
+    if(businessIcons!=null){
+     val col=i%4
+     val row=i/4
+     val tileW=businessIcons.width/4
+     val tileH=businessIcons.height/2
+     val source=Rect(col*tileW,row*tileH,(col+1)*tileW,(row+1)*tileH)
+     p.color=Color.WHITE;p.alpha=255;p.isFilterBitmap=true
+     c.drawBitmap(businessIcons,source,RectF(x,y,x+91f,y+68f),p)
+    }else{
+     box(c,x,y+3f,91f,68f,Color.rgb(147,112,82),12f)
+     box(c,x,y,91f,68f,if(i<2)Color.rgb(255,216,153) else Color.rgb(214,198,178),12f)
+     text(c,quick[i],x+45f,y+42f,13f)
+    }
    }
   }else if(tab==1||tab==2){
    text(c,if(tab==1)"능력 강화" else "직원과 사업",200f,154f,30f)
