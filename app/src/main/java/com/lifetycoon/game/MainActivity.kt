@@ -49,6 +49,12 @@ class Game(ctx:Context):View(ctx){
  var last=System.currentTimeMillis()
  val p=Paint(3)
  val dark=Color.rgb(56,43,40)
+ val background:Bitmap?=try {
+   val file=ctx.assets.list("")?.firstOrNull { it.endsWith(".png",true) && it!="a_clean_colorful_cartoon_game_assets_sheet_flat_c.png" }
+   if(file!=null)ctx.assets.open(file).use { BitmapFactory.decodeStream(it) } else null
+ }catch(e:Exception){android.util.Log.e("LifeTycoon","Background load failed",e);null}
+ var tapPulse=0f
+ val bursts=mutableListOf<Triple<Float,Float,Long>>()
  val hero:Bitmap?=try{
    val sheet=ctx.assets.open("a_clean_colorful_cartoon_game_assets_sheet_flat_c.png").use { BitmapFactory.decodeStream(it) }
    val sx=sheet.width/1536f
@@ -89,14 +95,34 @@ class Game(ctx:Context):View(ctx){
   text(c,format(cash)+" 원",200f,117f,30f)
   text(c,"초당 +"+format((staff*2+shop*25).toDouble())+"원",200f,146f,17f)
   if(tab==0){
-   box(c,18f,194f,364f,420f,Color.rgb(255,250,237))
+   if(background!=null){
+    p.color=Color.WHITE;p.alpha=255
+    c.save();c.clipRect(18f,194f,382f,614f)
+    val cropWidth=background.width*0.85f
+    val source=Rect(((background.width-cropWidth)/2).toInt(),0,((background.width+cropWidth)/2).toInt(),background.height)
+    c.drawBitmap(background,source,RectF(18f,194f,382f,614f),p)
+    c.restore()
+   }else box(c,18f,194f,364f,420f,Color.rgb(255,250,237))
    if(hero!=null){
     p.color=Color.WHITE;p.alpha=255
+    val pulse=1f+tapPulse*0.035f
+    c.save();c.scale(pulse,pulse,200f,495f)
     c.drawBitmap(hero,null,RectF(76f,242f,324f,552f),p)
+    c.restore()
    }else{
     p.color=Color.rgb(91,127,79);c.drawOval(126f,404f,274f,545f,p)
     p.color=Color.rgb(246,190,135);c.drawCircle(200f,350f,82f,p)
     text(c,"캐릭터 로딩 실패",200f,440f,18f)
+   }
+   tapPulse=(tapPulse-0.08f).coerceAtLeast(0f)
+   val iter=bursts.iterator()
+   while(iter.hasNext()){
+    val item=iter.next()
+    val age=(now-item.third)/650f
+    if(age>=1f){iter.remove();continue}
+    p.color=Color.argb(((1f-age)*255).toInt(),255,215,60)
+    c.drawCircle(item.first,item.second-age*90f,15f*(1f-age*0.4f),p)
+    text(c,"+"+format(tap.toDouble()),item.first,item.second-age*90f-22f,23f,Color.rgb(255,230,55))
    }
    box(c,47f,555f,306f,66f,Color.rgb(255,188,55))
    text(c,"터치해서 돈 벌기!",200f,597f,25f)
@@ -133,7 +159,7 @@ class Game(ctx:Context):View(ctx){
   if(width<=0||height<=0)return true
   val x=e.x*400f/width;val y=e.y*800f/height
   if(y>=704f){tab=(x/133f).toInt().coerceIn(0,2)}
-  else if(tab==0&&y in 194f..625f){cash+=tap}
+  else if(tab==0&&y in 194f..625f){cash+=tap;tapPulse=1f;bursts.add(Triple(x.coerceIn(70f,330f),y.coerceIn(265f,515f),System.currentTimeMillis()));if(bursts.size>12)bursts.removeAt(0)}
   else if(tab!=0){
    val i=if(y in 251f..388f)0 else if(y in 405f..542f)1 else -1
    if(i>=0){
