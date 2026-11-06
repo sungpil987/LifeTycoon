@@ -60,7 +60,7 @@ class Game(ctx:Context):View(ctx){
  val deep=Color.rgb(65,51,53)
  val lime=Color.rgb(141,212,57)
  val background:Bitmap?=try {
-   val file=ctx.assets.list("")?.firstOrNull { it.endsWith(".png",true) && it!="a_clean_colorful_cartoon_game_assets_sheet_flat_c.png" && it!="lifetycoon_business_icons_0_6.png" && it!="file_00000000ac148209960818905b980f98.png" }
+   val file=ctx.assets.list("")?.firstOrNull { it.endsWith(".png",true) && it!="a_clean_colorful_cartoon_game_assets_sheet_flat_c.png" && it!="lifetycoon_business_icons_0_6.png" && it!="file_00000000ac148209960818905b980f98.png" && it!="file_00000000ce1c82098ec8c79ec7a14403.png" }
    if(file!=null)ctx.assets.open(file).use { BitmapFactory.decodeStream(it) } else null
  }catch(e:Exception){android.util.Log.e("LifeTycoon","Background load failed",e);null}
  val businessIcons:Bitmap?=try {
@@ -91,6 +91,29 @@ class Game(ctx:Context):View(ctx){
    val right=(bounds.left+bounds.width()*end).toInt().coerceIn(left+1,bitmap.width)
    p.color=Color.WHITE;p.alpha=255;p.isFilterBitmap=true
    c.drawBitmap(bitmap,Rect(left,bounds.top,right,bounds.bottom),RectF(x,y,x+w,y+h),p)
+ }
+ val sideSheet:Bitmap?=try{
+   ctx.assets.open("file_00000000ce1c82098ec8c79ec7a14403.png").use { BitmapFactory.decodeStream(it) }
+ }catch(e:Exception){android.util.Log.e("LifeTycoon","Side icons load failed",e);null}
+ // Artwork is arranged as two columns with four icons on the left and three on the right.
+ // Crop bounds are fractional so they remain valid if the PNG resolution changes.
+ fun sideIcon(c:Canvas,index:Int,x:Float,y:Float,w:Float,h:Float){
+   val bitmap=sideSheet?:return
+   val col=if(index<4)0 else 1
+   val row=if(index<4)index else index-4
+   val bounds=if(col==0)arrayOf(
+    floatArrayOf(.035f,.02f,.36f,.285f),
+    floatArrayOf(.035f,.285f,.36f,.52f),
+    floatArrayOf(.035f,.515f,.36f,.75f),
+    floatArrayOf(.035f,.735f,.36f,.995f)
+   ) else arrayOf(
+    floatArrayOf(.61f,.02f,.94f,.29f),
+    floatArrayOf(.61f,.29f,.94f,.56f),
+    floatArrayOf(.61f,.565f,.95f,.82f)
+   )
+   val a=bounds[row]
+   p.color=Color.WHITE;p.alpha=255;p.isFilterBitmap=true
+   c.drawBitmap(bitmap,Rect((a[0]*bitmap.width).toInt(),(a[1]*bitmap.height).toInt(),(a[2]*bitmap.width).toInt(),(a[3]*bitmap.height).toInt()),RectF(x,y,x+w,y+h),p)
  }
  var tapPulse=0f
  val bursts=mutableListOf<Triple<Float,Float,Long>>()
@@ -162,16 +185,18 @@ class Game(ctx:Context):View(ctx){
     p.color=Color.rgb(246,190,135);c.drawCircle(200f,350f,82f,p)
     text(c,"캐릭터 로딩 실패",200f,440f,18f)
    }
-   // Side shortcuts: compact badges that do not cover the hero.
-   val sideNames=listOf("퀘스트","업적","도감","이벤트","랭킹","룰렛")
-   for(i in 0..5){
-    val left=i<3
-    val x=if(left)20f else 328f
-    val y=113f+(i%3)*80f
-    box(c,x+2f,y+3f,53f,57f,deep,13f)
-    box(c,x,y,53f,57f,if(left)Color.rgb(255,226,168) else Color.rgb(243,208,159),12f)
-    text(c,listOf("✓","★","▤","!","♛","◉")[i],x+26f,y+31f,24f)
-    text(c,sideNames[i],x+26f,y+48f,11f)
+   // Seven illustrated shortcuts, positioned around the central character.
+   for(i in 0..6){
+    val left=i<4
+    val x=if(left)16f else 328f
+    val row=if(left)i else i-4
+    val y=106f+row*74f
+    if(sideSheet!=null){
+     sideIcon(c,i,x,y,58f,65f)
+    }else{
+     box(c,x,y,58f,65f,Color.rgb(255,225,160),12f)
+     text(c,listOf("퀘스트","업적","도감","이벤트","랭킹","룰렛","보상")[i],x+29f,y+40f,12f)
+    }
    }
    tapPulse=(tapPulse-0.08f).coerceAtLeast(0f)
    val iter=bursts.iterator()
@@ -295,10 +320,13 @@ class Game(ctx:Context):View(ctx){
    save();invalidate();return true
   }
   if(y>=681f){overlay=0;tab=(x/66.6667f).toInt().coerceIn(0,5);notice=""}
-  else if(tab==0&&y in 113f..350f && (x<78f||x>322f)){
-   val row=((y-113f)/80f).toInt().coerceIn(0,2)
-   if(x<78f){when(row){0->overlay=1;1->tab=3;2->tab=4}}
-   else{overlay=when(row){0->3;1->4;else->2}}
+  else if(tab==0&&y in 106f..403f && (x<79f||x>323f)){
+   val row=((y-106f)/74f).toInt()
+   if(x<79f){
+    when(row){0->overlay=1;1->tab=3;2->tab=4;3->overlay=2}
+   }else{
+    when(row){0->overlay=3;1->overlay=4;2->notice="보상받기는 준비 중"}
+   }
   }
   else if(tab==0&&y in 510f..655f){
    val col=(x/100f).toInt().coerceIn(0,3)
