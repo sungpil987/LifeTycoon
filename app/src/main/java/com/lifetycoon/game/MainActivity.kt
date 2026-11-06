@@ -50,6 +50,9 @@ class Game(ctx:Context):View(ctx){
  var tab=0
  var totalTaps=store.getLong("totalTaps",0)
  var notice=""
+ var overlay=0
+ var questClaimed=store.getBoolean("questClaimed",false)
+ var rouletteUsed=store.getLong("rouletteUsed",0L)
  var last=System.currentTimeMillis()
  val p=Paint(3)
  val dark=Color.rgb(56,43,40)
@@ -94,7 +97,7 @@ class Game(ctx:Context):View(ctx){
  fun text(c:Canvas,s:String,x:Float,y:Float,size:Float=22f,color:Int=dark){p.color=color;p.textSize=size;p.typeface=Typeface.create("sans-serif",Typeface.BOLD);p.textAlign=Paint.Align.CENTER;c.drawText(s,x,y,p)}
  fun format(v:Double):String=when{v>=1e12->"%.1f조".format(v/1e12);v>=1e8->"%.1f억".format(v/1e8);v>=1e4->"%.1f만".format(v/1e4);else->"%.0f".format(v)}
  fun cost(base:Double,level:Int)=base*1.2.pow(level.toDouble())
- fun save(){store.edit().putLong("cash",cash.coerceAtMost(Long.MAX_VALUE.toDouble()).toLong()).putInt("tap",tap).putInt("staff",staff).putInt("shop",shop).putLong("totalTaps",totalTaps).apply()}
+ fun save(){store.edit().putLong("cash",cash.coerceAtMost(Long.MAX_VALUE.toDouble()).toLong()).putInt("tap",tap).putInt("staff",staff).putInt("shop",shop).putLong("totalTaps",totalTaps).putBoolean("questClaimed",questClaimed).putLong("rouletteUsed",rouletteUsed).apply()}
  override fun onDraw(c:Canvas){
   try {
   val now=System.currentTimeMillis();cash+=(staff*2+shop*25)*(now-last).coerceIn(0,60000)/1000.0;last=now
@@ -128,6 +131,17 @@ class Game(ctx:Context):View(ctx){
     p.color=Color.rgb(91,127,79);c.drawOval(126f,404f,274f,545f,p)
     p.color=Color.rgb(246,190,135);c.drawCircle(200f,350f,82f,p)
     text(c,"캐릭터 로딩 실패",200f,440f,18f)
+   }
+   // Side shortcuts: compact badges that do not cover the hero.
+   val sideNames=listOf("퀘스트","업적","도감","이벤트","랭킹","룰렛")
+   for(i in 0..5){
+    val left=i<3
+    val x=if(left)20f else 328f
+    val y=113f+(i%3)*80f
+    box(c,x+2f,y+3f,53f,57f,deep,13f)
+    box(c,x,y,53f,57f,if(left)Color.rgb(255,226,168) else Color.rgb(243,208,159),12f)
+    text(c,listOf("✓","★","▤","!","♛","◉")[i],x+26f,y+31f,24f)
+    text(c,sideNames[i],x+26f,y+48f,11f)
    }
    tapPulse=(tapPulse-0.08f).coerceAtLeast(0f)
    val iter=bursts.iterator()
@@ -190,6 +204,32 @@ class Game(ctx:Context):View(ctx){
     text(c,lines[i],200f,y+44f,19f)
    }
   }
+  if(overlay!=0){
+   box(c,20f,193f,360f,294f,deep,23f)
+   box(c,26f,199f,348f,282f,Color.rgb(255,244,216),19f)
+   val heading=when(overlay){1->"오늘의 퀘스트";2->"이벤트";3->"랭킹";else->"행운 룰렛"}
+   text(c,heading,200f,239f,27f)
+   text(c,"닫기 X",335f,225f,14f)
+   when(overlay){
+    1->{
+     text(c,"터치 50회 달성",200f,292f,22f)
+     text(c,"${totalTaps.coerceAtMost(50L)}/50회",200f,328f,19f)
+     box(c,66f,355f,268f,55f,if(totalTaps>=50&&!questClaimed)lime else Color.LTGRAY,13f)
+     text(c,if(questClaimed)"보상 수령 완료" else "보상 받기  +500원",200f,390f,19f)
+    }
+    4->{
+     text(c,"하루 1회 무료 보너스",200f,291f,21f)
+     val available=System.currentTimeMillis()-rouletteUsed>=86400000L
+     text(c,if(available)"오늘의 행운을 확인해 봐!" else "오늘은 이미 참여했어",200f,329f,18f)
+     box(c,66f,355f,268f,55f,if(available)lime else Color.LTGRAY,13f)
+     text(c,if(available)"돌리기 (100~500원)" else "내일 다시 도전!",200f,390f,18f)
+    }
+    else->{
+     text(c,if(overlay==2)"새 이벤트 준비 중" else "온라인 랭킹 준비 중",200f,305f,21f)
+     text(c,"추후 업데이트에서 공개",200f,348f,17f)
+    }
+   }
+  }
   box(c,0f,681f,400f,119f,deep,0f)
   val names=listOf("홈","강화","사업","업적","도감","상점")
   val symbols=listOf("⌂","↑","▣","★","▤","▥")
@@ -212,7 +252,24 @@ class Game(ctx:Context):View(ctx){
   if(e.action!=MotionEvent.ACTION_UP)return true
   if(width<=0||height<=0)return true
   val x=e.x*400f/width;val y=e.y*800f/height
-  if(y>=681f){tab=(x/66.6667f).toInt().coerceIn(0,5);notice=""}
+  if(overlay!=0 && y<681f){
+   if(y in 193f..251f && x>288f){overlay=0}
+   else if(y in 355f..420f){
+    if(overlay==1 && totalTaps>=50 && !questClaimed){cash+=500.0;questClaimed=true;notice="퀘스트 보상 +500원!"}
+    if(overlay==4 && System.currentTimeMillis()-rouletteUsed>=86400000L){
+     val reward=(1..5).random()*100
+     cash+=reward;rouletteUsed=System.currentTimeMillis();notice="룰렛 보상 +${reward}원!"
+    }
+    overlay=0
+   }
+   save();invalidate();return true
+  }
+  if(y>=681f){overlay=0;tab=(x/66.6667f).toInt().coerceIn(0,5);notice=""}
+  else if(tab==0&&y in 113f..350f && (x<78f||x>322f)){
+   val row=((y-113f)/80f).toInt().coerceIn(0,2)
+   if(x<78f){when(row){0->overlay=1;1->tab=3;2->tab=4}}
+   else{overlay=when(row){0->3;1->4;else->2}}
+  }
   else if(tab==0&&y in 510f..655f){
    val col=(x/100f).toInt().coerceIn(0,3)
    val row=if(y<586f)0 else 1
