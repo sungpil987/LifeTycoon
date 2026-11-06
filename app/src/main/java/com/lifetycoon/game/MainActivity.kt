@@ -46,6 +46,8 @@ class Game(ctx:Context):View(ctx){
  var staff=store.getInt("staff",0)
  var shop=store.getInt("shop",0)
  var tab=0
+ var totalTaps=store.getLong("totalTaps",0)
+ var notice=""
  var last=System.currentTimeMillis()
  val p=Paint(3)
  val dark=Color.rgb(56,43,40)
@@ -87,36 +89,35 @@ class Game(ctx:Context):View(ctx){
  fun text(c:Canvas,s:String,x:Float,y:Float,size:Float=22f,color:Int=dark){p.color=color;p.textSize=size;p.typeface=Typeface.create("sans-serif",Typeface.BOLD);p.textAlign=Paint.Align.CENTER;c.drawText(s,x,y,p)}
  fun format(v:Double):String=when{v>=1e12->"%.1f조".format(v/1e12);v>=1e8->"%.1f억".format(v/1e8);v>=1e4->"%.1f만".format(v/1e4);else->"%.0f".format(v)}
  fun cost(base:Double,level:Int)=base*1.2.pow(level.toDouble())
- fun save(){store.edit().putLong("cash",cash.coerceAtMost(Long.MAX_VALUE.toDouble()).toLong()).putInt("tap",tap).putInt("staff",staff).putInt("shop",shop).apply()}
+ fun save(){store.edit().putLong("cash",cash.coerceAtMost(Long.MAX_VALUE.toDouble()).toLong()).putInt("tap",tap).putInt("staff",staff).putInt("shop",shop).putLong("totalTaps",totalTaps).apply()}
  override fun onDraw(c:Canvas){
   try {
   val now=System.currentTimeMillis();cash+=(staff*2+shop*25)*(now-last).coerceIn(0,60000)/1000.0;last=now
   c.save();c.scale(width/400f,height/800f);c.drawColor(Color.rgb(255,247,223))
-  box(c,0f,0f,400f,180f,Color.rgb(255,220,146),0f)
-  box(c,14f,12f,372f,56f,deep,17f)
-  text(c,"인생역전",107f,49f,27f,Color.WHITE)
-  box(c,205f,21f,168f,38f,Color.rgb(37,31,35),16f)
-  text(c,"₩ "+format(cash),288f,47f,24f,Color.rgb(255,216,77))
-  box(c,16f,81f,176f,80f,Color.WHITE,18f)
-  box(c,207f,81f,177f,80f,Color.WHITE,18f)
-  text(c,"터치 수익",104f,109f,17f,deep)
-  text(c,"+"+format(tap.toDouble())+"원",104f,142f,25f,Color.rgb(210,125,34))
-  text(c,"자동 수익",295f,109f,17f,deep)
-  text(c,"+"+format((staff*2+shop*25).toDouble())+"원/초",295f,142f,23f,Color.rgb(71,141,75))
+  box(c,0f,0f,400f,92f,Color.rgb(255,220,146),0f)
+  box(c,7f,12f,140f,64f,deep,15f)
+  text(c,"Lv."+((totalTaps/100)+1)+" 거지",77f,36f,17f,Color.WHITE)
+  box(c,20f,47f,114f,13f,Color.rgb(35,30,31),7f)
+  box(c,20f,47f,114f*(totalTaps%100)/100f,13f,amber,7f)
+  box(c,153f,15f,142f,53f,deep,16f)
+  text(c,"₩ "+format(cash),224f,49f,23f,Color.rgb(255,215,79))
+  box(c,301f,15f,91f,53f,deep,16f)
+  text(c,"◆ 0",344f,48f,21f,Color.rgb(219,145,255))
+  if(notice.isNotEmpty())text(c,notice,200f,89f,13f,deep)
   if(tab==0){
    if(background!=null){
     p.color=Color.WHITE;p.alpha=255
-    c.save();c.clipRect(18f,194f,382f,614f)
+    c.save();c.clipRect(18f,94f,382f,442f)
     val cropWidth=background.width*0.85f
     val source=Rect(((background.width-cropWidth)/2).toInt(),0,((background.width+cropWidth)/2).toInt(),background.height)
-    c.drawBitmap(background,source,RectF(18f,194f,382f,614f),p)
+    c.drawBitmap(background,source,RectF(18f,94f,382f,442f),p)
     c.restore()
-   }else box(c,18f,194f,364f,420f,Color.rgb(255,250,237))
+   }else box(c,18f,94f,364f,348f,Color.rgb(255,250,237))
    if(hero!=null){
     p.color=Color.WHITE;p.alpha=255
     val pulse=1f+tapPulse*0.035f
-    c.save();c.scale(pulse,pulse,200f,495f)
-    c.drawBitmap(hero,null,RectF(76f,242f,324f,552f),p)
+    c.save();c.scale(pulse,pulse,200f,370f)
+    c.drawBitmap(hero,null,RectF(103f,158f,297f,416f),p)
     c.restore()
    }else{
     p.color=Color.rgb(91,127,79);c.drawOval(126f,404f,274f,545f,p)
@@ -133,14 +134,22 @@ class Game(ctx:Context):View(ctx){
     c.drawCircle(item.first,item.second-age*90f,15f*(1f-age*0.4f),p)
     text(c,"+"+format(tap.toDouble()),item.first,item.second-age*90f-22f,23f,Color.rgb(255,230,55))
    }
-   box(c,47f,559f,306f,67f,Color.rgb(130,76,33),20f)
-   box(c,47f,551f,306f,67f,amber,20f)
-   text(c,"터치해서 돈 벌기!",200f,597f,25f)
-   text(c,"터치로 벌고, 고용해서 자동으로 벌자!",200f,663f,16f)
-  }else{
-   text(c,if(tab==1)"능력 강화" else "직원과 사업",200f,225f,30f)
+   box(c,61f,421f,278f,54f,Color.rgb(130,76,33),20f)
+   box(c,61f,415f,278f,54f,amber,20f)
+   text(c,"터치해서 돈 벌기!",200f,451f,23f)
+   text(c,"터치 +"+format(tap.toDouble())+"원       자동 +"+format((staff*2+shop*25).toDouble())+"원/초",200f,494f,16f)
+   val quick=listOf("직원 고용","가게 운영","부동산","기업 인수","도시 확장","환생","연구소","업적")
+   for(i in quick.indices){
+    val x=8f+(i%4)*98f;val y=510f+(i/4)*76f
+    box(c,x,y+3f,91f,68f,Color.rgb(147,112,82),12f)
+    box(c,x,y,91f,68f,if(i<2)Color.rgb(255,216,153) else Color.rgb(214,198,178),12f)
+    text(c,when(i){0->"♟";1->"▤";2->"▥";3->"▦";4->"⌂";5->"∞";6->"⚗";else->"★"},x+45f,y+31f,25f)
+    text(c,quick[i],x+45f,y+55f,13f)
+   }
+  }else if(tab==1||tab==2){
+   text(c,if(tab==1)"능력 강화" else "직원과 사업",200f,154f,30f)
    for(i in 0..1){
-    val y=251f+i*154f
+    val y=183f+i*154f
     val isTap=tab==1&&i==0
     val isStaff=(tab==1&&i==1)||(tab==2&&i==0)
     val level=if(isTap)tap-1 else if(isStaff)staff else shop
@@ -154,13 +163,27 @@ class Game(ctx:Context):View(ctx){
     text(c,format(price)+"원 구매",200f,y+107f,19f)
    }
   }
+  if(tab>=3){
+   text(c,when(tab){3->"업적";4->"도감";else->"상점"},200f,153f,30f)
+   val lines=when(tab){
+    3->listOf("첫 터치   "+if(totalTaps>=1)"완료" else "미완료","100번 터치   "+if(totalTaps>=100)"완료" else "미완료","직원 1명 고용   "+if(staff>=1)"완료" else "미완료","가게 1개 운영   "+if(shop>=1)"완료" else "미완료")
+    4->listOf("거리의 시작   발견","알바생   "+if(staff>0)"발견" else "미발견","노점   "+if(shop>0)"발견" else "미발견","더 많은 수집품은 다음 업데이트")
+    else->listOf("현재 버전은 무료 플레이","광고와 유료 결제 없음","상점 콘텐츠 준비 중")
+   }
+   for(i in lines.indices){
+    val y=190f+i*92f
+    box(c,22f,y,356f,75f,Color.WHITE,15f)
+    text(c,lines[i],200f,y+44f,19f)
+   }
+  }
   box(c,0f,681f,400f,119f,deep,0f)
-  val names=listOf("터치","강화","사업")
-  for(i in 0..2){
-   val x=8f+i*132f
-   box(c,x,690f,124f,72f,if(tab==i)amber else Color.rgb(105,90,88),17f)
-   text(c,when(i){0->"⌂";1->"↑";else->"▣"},x+62f,722f,25f,if(tab==i)deep else Color.WHITE)
-   text(c,names[i],x+62f,747f,18f,if(tab==i)deep else Color.WHITE)
+  val names=listOf("홈","강화","사업","업적","도감","상점")
+  val symbols=listOf("⌂","↑","▣","★","▤","▥")
+  for(i in 0..5){
+   val x=3f+i*66f
+   box(c,x,692f,64f,70f,if(tab==i)amber else Color.rgb(105,90,88),12f)
+   text(c,symbols[i],x+32f,724f,23f,if(tab==i)deep else Color.WHITE)
+   text(c,names[i],x+32f,748f,13f,if(tab==i)deep else Color.WHITE)
   }
   c.restore();postInvalidateDelayed(40)
   }catch(error:Throwable){
@@ -175,10 +198,16 @@ class Game(ctx:Context):View(ctx){
   if(e.action!=MotionEvent.ACTION_UP)return true
   if(width<=0||height<=0)return true
   val x=e.x*400f/width;val y=e.y*800f/height
-  if(y>=681f){tab=(x/133f).toInt().coerceIn(0,2)}
-  else if(tab==0&&y in 194f..625f){cash+=tap;tapPulse=1f;bursts.add(Triple(x.coerceIn(70f,330f),y.coerceIn(265f,515f),System.currentTimeMillis()));if(bursts.size>12)bursts.removeAt(0)}
-  else if(tab!=0){
-   val i=if(y in 251f..388f)0 else if(y in 405f..542f)1 else -1
+  if(y>=681f){tab=(x/66.6667f).toInt().coerceIn(0,5);notice=""}
+  else if(tab==0&&y in 510f..655f){
+   val col=(x/100f).toInt().coerceIn(0,3)
+   val row=if(y<586f)0 else 1
+   val choice=row*4+col
+   when(choice){0,1->tab=2;7->tab=3;else->notice="추후 업데이트에서 해금!"}
+  }
+  else if(tab==0&&y in 94f..480f){cash+=tap;totalTaps++;tapPulse=1f;bursts.add(Triple(x.coerceIn(70f,330f),y.coerceIn(265f,515f),System.currentTimeMillis()));if(bursts.size>12)bursts.removeAt(0)}
+  else if(tab==1||tab==2){
+   val i=if(y in 183f..320f)0 else if(y in 337f..474f)1 else -1
    if(i>=0){
     val a=tab==1&&i==0;val b=(tab==1&&i==1)||(tab==2&&i==0)
     val price=cost(if(a)10.0 else if(b)100.0 else 1500.0,if(a)tap-1 else if(b)staff else shop)
