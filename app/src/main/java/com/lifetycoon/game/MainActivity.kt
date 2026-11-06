@@ -60,7 +60,7 @@ class Game(ctx:Context):View(ctx){
  val deep=Color.rgb(65,51,53)
  val lime=Color.rgb(141,212,57)
  val background:Bitmap?=try {
-   val file=ctx.assets.list("")?.firstOrNull { it.endsWith(".png",true) && it!="a_clean_colorful_cartoon_game_assets_sheet_flat_c.png" && it!="lifetycoon_business_icons_0_6.png" && it!="file_00000000ac148209960818905b980f98.png" && it!="file_00000000ce1c82098ec8c79ec7a14403.png" }
+   val file=ctx.assets.list("")?.firstOrNull { it.endsWith(".png",true) && it!="a_clean_colorful_cartoon_game_assets_sheet_flat_c.png" && it!="lifetycoon_business_icons_0_6.png" && it!="file_00000000ac148209960818905b980f98.png" && it!="file_00000000ce1c82098ec8c79ec7a14403.png" && it!="file_00000000c3248209a554b1caf956df3c.png" }
    if(file!=null)ctx.assets.open(file).use { BitmapFactory.decodeStream(it) } else null
  }catch(e:Exception){android.util.Log.e("LifeTycoon","Background load failed",e);null}
  val businessIcons:Bitmap?=try {
@@ -115,6 +115,9 @@ class Game(ctx:Context):View(ctx){
    p.color=Color.WHITE;p.alpha=255;p.isFilterBitmap=true
    c.drawBitmap(bitmap,Rect((a[0]*bitmap.width).toInt(),(a[1]*bitmap.height).toInt(),(a[2]*bitmap.width).toInt(),(a[3]*bitmap.height).toInt()),RectF(x,y,x+w,y+h),p)
  }
+ val navSheet:Bitmap?=try{
+   ctx.assets.open("file_00000000c3248209a554b1caf956df3c.png").use { BitmapFactory.decodeStream(it) }
+ }catch(e:Exception){android.util.Log.e("LifeTycoon","Nav art load failed",e);null}
  var tapPulse=0f
  val bursts=mutableListOf<Triple<Float,Float,Long>>()
  val hero:Bitmap?=try{
@@ -291,8 +294,16 @@ class Game(ctx:Context):View(ctx){
   for(i in 0..5){
    val x=3f+i*66f
    box(c,x,692f,64f,70f,if(tab==i)amber else Color.rgb(105,90,88),12f)
-   text(c,symbols[i],x+32f,724f,23f,if(tab==i)deep else Color.WHITE)
-   text(c,names[i],x+32f,748f,13f,if(tab==i)deep else Color.WHITE)
+   if(navSheet!=null){
+    val sliceW=navSheet.width/6
+    // Source sheet has black padding above and below the six horizontal icons.
+    val src=Rect(i*sliceW,(navSheet.height*.12f).toInt(),(i+1)*sliceW,(navSheet.height*.9f).toInt())
+    p.color=Color.WHITE;p.alpha=255;p.isFilterBitmap=true
+    c.drawBitmap(navSheet,src,RectF(x+3f,694f,x+61f,757f),p)
+   }else{
+    text(c,symbols[i],x+32f,724f,23f,if(tab==i)deep else Color.WHITE)
+    text(c,names[i],x+32f,748f,13f,if(tab==i)deep else Color.WHITE)
+   }
   }
   c.restore();postInvalidateDelayed(40)
   }catch(error:Throwable){
