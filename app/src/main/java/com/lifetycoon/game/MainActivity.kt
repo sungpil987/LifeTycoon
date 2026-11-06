@@ -49,6 +49,9 @@ class Game(ctx:Context):View(ctx){
  var last=System.currentTimeMillis()
  val p=Paint(3)
  val dark=Color.rgb(56,43,40)
+ val amber=Color.rgb(255,188,55)
+ val deep=Color.rgb(65,51,53)
+ val lime=Color.rgb(141,212,57)
  val background:Bitmap?=try {
    val file=ctx.assets.list("")?.firstOrNull { it.endsWith(".png",true) && it!="a_clean_colorful_cartoon_game_assets_sheet_flat_c.png" }
    if(file!=null)ctx.assets.open(file).use { BitmapFactory.decodeStream(it) } else null
@@ -89,11 +92,17 @@ class Game(ctx:Context):View(ctx){
   try {
   val now=System.currentTimeMillis();cash+=(staff*2+shop*25)*(now-last).coerceIn(0,60000)/1000.0;last=now
   c.save();c.scale(width/400f,height/800f);c.drawColor(Color.rgb(255,247,223))
-  box(c,0f,0f,400f,180f,Color.rgb(255,216,130),0f)
-  text(c,"인생역전",200f,53f,34f)
-  box(c,20f,78f,360f,85f,Color.WHITE)
-  text(c,format(cash)+" 원",200f,117f,30f)
-  text(c,"초당 +"+format((staff*2+shop*25).toDouble())+"원",200f,146f,17f)
+  box(c,0f,0f,400f,180f,Color.rgb(255,220,146),0f)
+  box(c,14f,12f,372f,56f,deep,17f)
+  text(c,"인생역전",107f,49f,27f,Color.WHITE)
+  box(c,205f,21f,168f,38f,Color.rgb(37,31,35),16f)
+  text(c,"₩ "+format(cash),288f,47f,24f,Color.rgb(255,216,77))
+  box(c,16f,81f,176f,80f,Color.WHITE,18f)
+  box(c,207f,81f,177f,80f,Color.WHITE,18f)
+  text(c,"터치 수익",104f,109f,17f,deep)
+  text(c,"+"+format(tap.toDouble())+"원",104f,142f,25f,Color.rgb(210,125,34))
+  text(c,"자동 수익",295f,109f,17f,deep)
+  text(c,"+"+format((staff*2+shop*25).toDouble())+"원/초",295f,142f,23f,Color.rgb(71,141,75))
   if(tab==0){
    if(background!=null){
     p.color=Color.WHITE;p.alpha=255
@@ -124,9 +133,10 @@ class Game(ctx:Context):View(ctx){
     c.drawCircle(item.first,item.second-age*90f,15f*(1f-age*0.4f),p)
     text(c,"+"+format(tap.toDouble()),item.first,item.second-age*90f-22f,23f,Color.rgb(255,230,55))
    }
-   box(c,47f,555f,306f,66f,Color.rgb(255,188,55))
+   box(c,47f,559f,306f,67f,Color.rgb(130,76,33),20f)
+   box(c,47f,551f,306f,67f,amber,20f)
    text(c,"터치해서 돈 벌기!",200f,597f,25f)
-   text(c,"캐릭터를 눌러 수익 획득",200f,665f,17f)
+   text(c,"터치로 벌고, 고용해서 자동으로 벌자!",200f,663f,16f)
   }else{
    text(c,if(tab==1)"능력 강화" else "직원과 사업",200f,225f,30f)
    for(i in 0..1){
@@ -135,16 +145,23 @@ class Game(ctx:Context):View(ctx){
     val isStaff=(tab==1&&i==1)||(tab==2&&i==0)
     val level=if(isTap)tap-1 else if(isStaff)staff else shop
     val price=cost(if(isTap)10.0 else if(isStaff)100.0 else 1500.0,level)
+    box(c,20f,y+4f,360f,137f,Color.rgb(204,180,146))
     box(c,20f,y,360f,137f,Color.WHITE)
     text(c,if(isTap)"손놀림 강화" else if(isStaff)"알바생 고용" else "노점 운영",200f,y+35f,23f)
     text(c,if(isTap)"터치 +1" else if(isStaff)"초당 +2원" else "초당 +25원",200f,y+64f,17f)
-    box(c,45f,y+78f,310f,45f,if(cash>=price)Color.rgb(255,188,55) else Color.LTGRAY)
+    box(c,45f,y+81f,310f,45f,Color.rgb(128,101,67))
+    box(c,45f,y+77f,310f,45f,if(cash>=price)lime else Color.LTGRAY)
     text(c,format(price)+"원 구매",200f,y+107f,19f)
    }
   }
-  box(c,0f,704f,400f,96f,Color.WHITE,0f)
+  box(c,0f,681f,400f,119f,deep,0f)
   val names=listOf("터치","강화","사업")
-  for(i in 0..2){box(c,8f+i*132f,719f,124f,63f,if(tab==i)Color.rgb(255,188,55) else Color.rgb(239,231,210));text(c,names[i],70f+i*132f,759f,21f)}
+  for(i in 0..2){
+   val x=8f+i*132f
+   box(c,x,690f,124f,72f,if(tab==i)amber else Color.rgb(105,90,88),17f)
+   text(c,when(i){0->"⌂";1->"↑";else->"▣"},x+62f,722f,25f,if(tab==i)deep else Color.WHITE)
+   text(c,names[i],x+62f,747f,18f,if(tab==i)deep else Color.WHITE)
+  }
   c.restore();postInvalidateDelayed(40)
   }catch(error:Throwable){
    android.util.Log.e("LifeTycoon","Draw error",error)
@@ -158,7 +175,7 @@ class Game(ctx:Context):View(ctx){
   if(e.action!=MotionEvent.ACTION_UP)return true
   if(width<=0||height<=0)return true
   val x=e.x*400f/width;val y=e.y*800f/height
-  if(y>=704f){tab=(x/133f).toInt().coerceIn(0,2)}
+  if(y>=681f){tab=(x/133f).toInt().coerceIn(0,2)}
   else if(tab==0&&y in 194f..625f){cash+=tap;tapPulse=1f;bursts.add(Triple(x.coerceIn(70f,330f),y.coerceIn(265f,515f),System.currentTimeMillis()));if(bursts.size>12)bursts.removeAt(0)}
   else if(tab!=0){
    val i=if(y in 251f..388f)0 else if(y in 405f..542f)1 else -1
