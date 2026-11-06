@@ -49,6 +49,31 @@ class Game(ctx:Context):View(ctx){
  var last=System.currentTimeMillis()
  val p=Paint(3)
  val dark=Color.rgb(56,43,40)
+ val hero:Bitmap?=try{
+   val sheet=ctx.assets.open("a_clean_colorful_cartoon_game_assets_sheet_flat_c.png").use { BitmapFactory.decodeStream(it) }
+   val sx=sheet.width/1536f
+   val sy=sheet.height/1024f
+   val left=0
+   val top=0
+   val right=(360*sx).toInt().coerceAtMost(sheet.width)
+   val bottom=(535*sy).toInt().coerceAtMost(sheet.height)
+   val crop=Bitmap.createBitmap(sheet,left,top,right-left,bottom-top)
+   val pixels=IntArray(crop.width*crop.height)
+   crop.getPixels(pixels,0,crop.width,0,0,crop.width,crop.height)
+   for(i in pixels.indices){
+     val color=pixels[i]
+     val r=Color.red(color);val g=Color.green(color);val b=Color.blue(color)
+     val minimum=minOf(r,g,b)
+     if(minimum>243 && maxOf(r,g,b)-minimum<15) pixels[i]=Color.TRANSPARENT
+     else if(minimum>225 && maxOf(r,g,b)-minimum<12){
+       val alpha=((243-minimum)*255/18).coerceIn(0,255)
+       pixels[i]=Color.argb(alpha,r,g,b)
+     }
+   }
+   val result=Bitmap.createBitmap(crop.width,crop.height,Bitmap.Config.ARGB_8888)
+   result.setPixels(pixels,0,crop.width,0,0,crop.width,crop.height)
+   crop.recycle();sheet.recycle();result
+ }catch(e:Exception){android.util.Log.e("LifeTycoon","Asset load failed",e);null}
  fun box(c:Canvas,x:Float,y:Float,w:Float,h:Float,color:Int,r:Float=20f){p.color=color;c.drawRoundRect(x,y,x+w,y+h,r,r,p)}
  fun text(c:Canvas,s:String,x:Float,y:Float,size:Float=22f,color:Int=dark){p.color=color;p.textSize=size;p.typeface=Typeface.create("sans-serif",Typeface.BOLD);p.textAlign=Paint.Align.CENTER;c.drawText(s,x,y,p)}
  fun format(v:Double):String=when{v>=1e12->"%.1f조".format(v/1e12);v>=1e8->"%.1f억".format(v/1e8);v>=1e4->"%.1f만".format(v/1e4);else->"%.0f".format(v)}
@@ -64,14 +89,15 @@ class Game(ctx:Context):View(ctx){
   text(c,format(cash)+" 원",200f,117f,30f)
   text(c,"초당 +"+format((staff*2+shop*25).toDouble())+"원",200f,146f,17f)
   if(tab==0){
-   box(c,18f,194f,364f,420f,Color.rgb(241,226,190))
-   // Original cartoon protagonist, rendered directly in Android Canvas.
-   p.color=Color.rgb(91,127,79);c.drawOval(126f,404f,274f,545f,p)
-   p.color=Color.rgb(246,190,135);c.drawCircle(200f,350f,82f,p)
-   p.color=Color.rgb(54,43,40);c.drawArc(118f,261f,282f,351f,180f,180f,false,p)
-   p.color=Color.WHITE;c.drawCircle(169f,351f,13f,p);c.drawCircle(231f,351f,13f,p)
-   p.color=dark;c.drawCircle(169f,352f,5f,p);c.drawCircle(231f,352f,5f,p)
-   p.color=Color.rgb(156,68,64);c.drawOval(174f,380f,226f,407f,p)
+   box(c,18f,194f,364f,420f,Color.rgb(255,250,237))
+   if(hero!=null){
+    p.color=Color.WHITE;p.alpha=255
+    c.drawBitmap(hero,null,RectF(76f,242f,324f,552f),p)
+   }else{
+    p.color=Color.rgb(91,127,79);c.drawOval(126f,404f,274f,545f,p)
+    p.color=Color.rgb(246,190,135);c.drawCircle(200f,350f,82f,p)
+    text(c,"캐릭터 로딩 실패",200f,440f,18f)
+   }
    box(c,47f,555f,306f,66f,Color.rgb(255,188,55))
    text(c,"터치해서 돈 벌기!",200f,597f,25f)
    text(c,"캐릭터를 눌러 수익 획득",200f,665f,17f)
